@@ -1,0 +1,16 @@
+blessings==1.7
+imageio==2.35.0
+matplotlib==3.7.5
+numpy==1.24.4
+opencv_contrib_python==4.5.5.62
+opencv_python==4.10.0.84
+pandas==2.0.3
+path.py==12.5.0
+Pillow==11.3.0
+progressbar33==2.4
+scipy==1.13.0
+scikit-image
+tensorboardX==2.6.2.2
+torch==2.3.1
+torchinfo==1.8.0
+tqdm

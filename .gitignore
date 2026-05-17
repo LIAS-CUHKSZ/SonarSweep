@@ -1,0 +1,11 @@
+data/
+*.pyc
+__pycache__/*
+dataset/preparation/testdata/*
+checkpoints/
+# pretrained/
+result/
+profiler_trace.json
+analysis_output/
+.vscode
+config
