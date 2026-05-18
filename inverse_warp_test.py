@@ -21,8 +21,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Structure from Motion Learner training on KITTI and CityScapes Dataset',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    # parser.add_argument('--data', metavar='DIR', default="./dataset/test/",help='path to dataset')
-    parser.add_argument('--data', metavar='DIR', default="/home/clp/workspace/Sonar_sweep/dataset/real/",help='path to dataset')
+    parser.add_argument('--data', metavar='DIR', default="data/vfov12hfov60_test", help='path to dataset')
     parser.add_argument('--ttype', default='test.txt', type=str, help='Text file indicates input data')
   
     parser.add_argument('-b', '--batch-size', default=1, type=int,

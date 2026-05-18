@@ -45,7 +45,6 @@ class RetrieveFolder(data.Dataset):
             T_cam = np.genfromtxt(scene/'cam_right_pose.txt').astype(np.float32).reshape((4, 4))
             T_sonar_from_cam = np.genfromtxt(scene/'T_camright2sonar.txt').astype(np.float32).reshape((4, 4))
             distance_range,_,_,theta_range,_,_,_ = np.genfromtxt(scene/'sonar_intrinsic.txt')
-            # TODO
             # cam_img = scene.files('cropped_cam_right.png')[0]
             cam_img = scene.files('enhanced_gray_cam_right.png')[0]
             
@@ -80,7 +79,6 @@ class RetrieveFolder(data.Dataset):
         if self.transform is not None:
             cam_img, sonar_rect_img = self.transform(cam_img, sonar_rect_img)
 
-        # TODO: if u use grey images, you need to change the shape of cam_img
         return cam_img.unsqueeze(0), sonar_rect_img.unsqueeze(0), depth_gt, \
                 K, T_sonar_from_cam, T_cam, \
                 distance_range.reshape(1), theta_range.reshape(1)    # np.linalg.inv(intrinsics)
@@ -121,14 +119,13 @@ class RetrieveFolderFull(data.Dataset):
             T_cam = np.genfromtxt(scene/'cam_right_pose.txt').astype(np.float32).reshape((4, 4))
             T_sonar_from_cam = np.genfromtxt(scene/'T_camright2sonar.txt').astype(np.float32).reshape((4, 4))
             distance_range,_,_,theta_range,_,_,_ = np.genfromtxt(scene/'sonar_intrinsic.txt')
-            # TODO
             # cam_img = scene.files('cropped_cam_right.png')[0]
             cam_img = scene.files('enhanced_gray_cam_right.png')[0]
             
             sonar_rect_img = scene.files('sonar_rect_denoise.png')[0]
             depth_gt = scene.files('cropped_depth_right.npy')[0]
             
-            # 添加cam_right.png和sonar_rect.png的路径
+            # Keep original camera and sonar images for visualization output.
             cam_right_img = scene.files('cam_right.png')[0]
             sonar_rect_original_img = scene.files('sonar_rect.png')[0]
             
@@ -152,8 +149,6 @@ class RetrieveFolderFull(data.Dataset):
         sonar_rect_img = load_as_float(sample['sonar_rect_img'])
         depth_gt = np.load(sample['depth_gt'])
         
-        # 读取新添加的图像文件
-        
         K = np.copy(sample['intrinsics'])
         # KT_inv = np.linalg.inv(K.T)
         T_sonar_from_cam = sample['T_sonar_from_cam']
@@ -167,7 +162,6 @@ class RetrieveFolderFull(data.Dataset):
         cam_right_img = cv2.imread(sample['cam_right_img'])
         sonar_rect_original_img = cv2.imread(sample['sonar_rect_original_img'])
         
-        # TODO: if u use grey images, you need to change the shape of cam_img
         return cam_img.unsqueeze(0), sonar_rect_img.unsqueeze(0), depth_gt, \
                 K, T_sonar_from_cam, T_cam, \
                 distance_range.reshape(1), theta_range.reshape(1), \

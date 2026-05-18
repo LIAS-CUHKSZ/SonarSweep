@@ -3,8 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from config.model_config import CAM_RESOLUTION_WIDTH_FOR_IMAGE_FEATURE_EXTRACTION, CAM_RESOLUTION_HEIGHT_FOR_IMAGE_FEATURE_EXTRACTION
-from config.model_config import SONAR_RESOLUTION_WIDTH_FOR_IMAGE_FEATURE_EXTRACTION, SONAR_RESOLUTION_HEIGHT_FOR_IMAGE_FEATURE_EXTRACTION
 from .submodule import *
 
 from .inverse_warp import warp_camera_to_sonar
@@ -28,16 +26,16 @@ class PSNet(nn.Module):
         self.register_buffer('label_factor', torch.tensor(label_factor, dtype=torch.float32))
             
         
-            # 注册常量张量
+        # Register the candidate plane depths.
         self.register_buffer('depths', 
             torch.tensor([mindepth * label_factor**i for i in range(nlabel)], 
                         dtype=torch.float32))
         
-        # 注册 alpha 参数
+        # Register the plane angle.
         self.register_buffer('alpha',
             torch.tensor(alpha, dtype=torch.float32))
         
-        # 注册法向量
+        # Register the plane normal.
         self.register_buffer('n_s',
             torch.tensor([0, torch.sin(self.alpha), torch.cos(self.alpha)], 
                         dtype=torch.float32).unsqueeze(-1))
@@ -105,13 +103,12 @@ class PSNet(nn.Module):
     
     def initialize_feature_extractors(self):
         """
-        一个专门用来初始化特征提取网络的函数。
-        你可以根据需要自定义这里的初始化方法。
+        Initialize the camera and sonar feature extraction networks.
         """
         print("=> Re-initializing rgb_feature_extraction and sonar_feature_extraction")
         for m in self.rgb_feature_extraction.modules():
             if isinstance(m, nn.Conv2d):
-                # 使用 Kaiming He 初始化
+                # Kaiming initialization for LeakyReLU layers.
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
@@ -135,25 +132,6 @@ class PSNet(nn.Module):
         K_cam_scaled = K_var.clone()
         K_cam_scaled[:, :2, :] /= scale_factor
         
-        # # TODO: 
-        # # Resize camera image to feature extraction resolution
-        # original_size = (cam_img_var.size(2), cam_img_var.size(3))  # Store original size
-        # cam_img_var = F.interpolate(cam_img_var, 
-        #                size=(CAM_RESOLUTION_HEIGHT_FOR_IMAGE_FEATURE_EXTRACTION, 
-        #                 CAM_RESOLUTION_WIDTH_FOR_IMAGE_FEATURE_EXTRACTION),
-        #                mode='bilinear',
-        #                align_corners=True)
-        # # Resize sonar image to feature extraction resolution
-        # sonar_rect_img_var = F.interpolate(sonar_rect_img_var,
-        #                size=(int(SONAR_RESOLUTION_HEIGHT_FOR_IMAGE_FEATURE_EXTRACTION * (distance_range_var/5)), 
-        #                 SONAR_RESOLUTION_WIDTH_FOR_IMAGE_FEATURE_EXTRACTION),
-        #                mode='bilinear',
-        #                align_corners=True)
-        
-        # # ignore operation between RGB and sonar image
-        
-        
-        
         rgb_img_feature = self.rgb_feature_extraction(cam_img_var)  # torch.Size([1, 3, 480, 640])  =>  torch.Size([1, 32, 120, 160])
         sonar_feature   = self.sonar_feature_extraction(sonar_rect_img_var)
 
@@ -172,7 +150,7 @@ class PSNet(nn.Module):
             cost[:, warped_sonar_feature.size()[1]:, i, :,:] = warped_sonar_feature
 
             
-        cost = cost.contiguous()  # 确保张量在内存中是连续存储的
+        cost = cost.contiguous()
         cost0 = self.dres0(cost)
         cost0 = self.dres1(cost0) + cost0
         cost0 = self.dres2(cost0) + cost0 
@@ -197,21 +175,6 @@ class PSNet(nn.Module):
         pred_probability = F.softmax(costss, dim=1, dtype=torch.float32)
         pred, variance = DisparityRegression(self.nlabel)(pred_probability) # torch.Size([B, 64, 480, 640])
         
-        # # Resize back to original resolution
-        # # TODO: 
-        # pred0_4d = pred0.unsqueeze(1)
-        # pred_4d = pred.unsqueeze(1)
-        # pred0 = F.interpolate(pred0_4d,
-        #                   size=original_size,
-        #                   mode='bilinear',
-        #                   align_corners=True)
-        # pred = F.interpolate(pred_4d,
-        #                   size=original_size,
-        #                   mode='bilinear',
-        #                   align_corners=True)
-        # pred0 = pred0.squeeze(1)
-        # pred = pred.squeeze(1)
-
         depth0_pseudo_plane = self.mindepth * self.label_factor**(pred0.unsqueeze(1))          # need to recover depth from plane index
         depth0 = compute_depth_norm_from_plane(depth0_pseudo_plane, K_var, T_sonar_from_cam_var, self.n_s, self.alpha)
         
@@ -219,17 +182,6 @@ class PSNet(nn.Module):
         depth = compute_depth_norm_from_plane(depth_pseudo_plane, K_var, T_sonar_from_cam_var, self.n_s, self.alpha)
         ##################################################
 
-        # from pathlib import Path
-        # # Save pred0 and pred for analysis
-        # save_dir = Path("analysis_output")
-        # save_dir.mkdir(exist_ok=True)
-        
-        # # 去掉batch维度并保存
-        # pred0_np = pred0_probability.detach().cpu().numpy()[0]  # [C,H,W]
-        # pred_np = pred_probability.detach().cpu().numpy()[0]    # [C,H,W]
-        # np.save(save_dir / "pred0_probability.npy", pred0_np)
-        # np.save(save_dir / "pred_probability.npy", pred_np)
-        
         if self.training:
             return depth0, depth
         else:

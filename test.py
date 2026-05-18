@@ -24,17 +24,17 @@ from config.model_config import MEAN, STD
 
 def visualize_depth(depth_img, max_depth=5.0):
     """
-    将深度图（通常是float类型）转换为可用于保存的可视化彩色图
+    Convert a depth map, usually float-valued, to a color image for saving.
     """
-    # 裁剪到最大深度
+    # Clamp to the visualization depth range.
     depth_in_metres = np.nan_to_num(depth_img, nan=max_depth)
     depth_in_metres[depth_in_metres > max_depth] = max_depth
     
-    # 归一化到0-255
+    # Normalize to 0-255.
     # normalized_depth = cv2.normalize(depth_in_metres, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8U)
     normalized_depth = (depth_in_metres / max_depth * 255).astype(np.uint8)
     
-    # 应用伪彩色映射
+    # Apply a pseudo-color map.
     colored_depth = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
     colored_depth[depth_in_metres == 0] = 0
     colored_depth[depth_in_metres == max_depth] = 0
@@ -43,16 +43,16 @@ def visualize_depth(depth_img, max_depth=5.0):
 
 def visualize_uncertainty(uncertainty_img, max_uncertainty=20.0):
     """
-    将不确定性图（通常是float类型）转换为可用于保存的可视化彩色图
+    Convert an uncertainty map, usually float-valued, to a color image for saving.
     """
-    # 裁剪到最大不确定性
+    # Clamp to the visualization uncertainty range.
     uncertainty_in_metres = np.nan_to_num(uncertainty_img, nan=max_uncertainty)
     uncertainty_in_metres[uncertainty_in_metres > max_uncertainty] = max_uncertainty
     
-    # 归一化到0-255
+    # Normalize to 0-255.
     normalized_uncertainty = (uncertainty_in_metres / max_uncertainty * 255).astype(np.uint8)
     
-    # 应用伪彩色映射
+    # Apply a pseudo-color map.
     colored_uncertainty = cv2.applyColorMap(normalized_uncertainty, cv2.COLORMAP_JET)
     
     return colored_uncertainty
@@ -67,7 +67,6 @@ parser.add_argument('-b', '--batch-size', default=1, type=int,
                     metavar='N', help='mini-batch size')
 
 parser.add_argument('--pretrained-dps', dest='pretrained_dps', default="./pretrained/045_025_B7.pth.tar", metavar='PATH', help='path to pre-trained dpsnet model')
-# parser.add_argument('--pretrained-dps', dest='pretrained_dps', default="/home/clp/workspace/Sonar_sweep/checkpoints/vfov12hfov60/09-01-23:02/dpsnet_38_checkpoint.pth.tar", metavar='PATH', help='path to pre-trained dpsnet model')
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 
 
@@ -97,7 +96,7 @@ def main():
     print("=> fetching scenes in '{}'".format(args.data))
     # normalize = custom_transforms.NormalizeCam(mean=MEAN, std=STD) # normalized_value = (x - mean) / std
     test_transform = custom_transforms.Compose([custom_transforms.ArrayToTensorGrey()])
-    # TODO: 如果需要灰度图像转换为张量，可以使用以下代码
+    # Use this transform if camera normalization is required.
     # test_transform = custom_transforms.Compose([custom_transforms.ArrayToTensorGrey(), normalize])
     test_set = RetrieveFolderFull(
         args.data,
@@ -134,7 +133,7 @@ def main():
 
     evaluator = DepthEvaluator(base_dir=output_dir)
 
-    # 创建进度条
+    # Create the progress bar.
     progress_bar = tqdm(enumerate(test_loader), 
                        total=len(test_loader), 
                        desc="Testing", 
@@ -169,11 +168,11 @@ def main():
             output_depth = torch.squeeze(output_depth.data.cpu(),1)
             uncertainty_array = torch.squeeze(variance.data.cpu(),1)
 
-            # 检查mask是否有有效值，避免空张量导致的错误
+            # Skip invalid masks inside the evaluator to avoid empty tensors.
             evaluator.update(depth_gt, output_depth)
 
             errors[:,i] = compute_errors_test(depth_gt, output_depth)
-            # 更新进度条显示当前错误信息
+            # Update the progress bar with current error values.
             progress_bar.set_postfix({
                 'Abs_Rel': f'{errors[0,i]:.4f}',
                 'RMSE': f'{errors[3,i]:.4f}',
@@ -190,7 +189,7 @@ def main():
             cam_img_array = cam_tensor2array(cam_img[0])
             cam_img_array = (cam_img_array * 255).astype(np.uint8)
         
-            # # 保存
+            # Save visualizations and arrays for each sample.
             # if errors[0,i] > 0.1 and False:
             if True:
                 os.makedirs(output_dir / f'{i:04d}', exist_ok=True)
@@ -215,42 +214,42 @@ def main():
                 np.save(output_dir/ f'{i:04d}' / 'gt_depth.npy', gt_depth_array)
                 cv2.imwrite(str(output_dir / f'{i:04d}' / 'gt_depth.png'), visualize_depth(gt_depth_array))   
     
-    # 关闭进度条
+    # Close the progress bar.
     progress_bar.close()
 
     print("\n" + "="*20 + " Final Evaluation Results " + "="*20)
-    # 你可以直接打印格式化的结果
+    # Print formatted results.
     evaluator.display_results()
     
-    # 保存结果到文件
+    # Save results to disk.
     evaluator.save_results("depth_evaluation_results.txt")
 
 
     error_names = ['abs_rel','abs_diff','sq_rel','rms','log_rms','a1','a2','a3']
-    # 使用nanmean来正确处理NaN值（当某些样本没有有效深度值时）
-    mean_errors = np.nanmean(errors, axis=1)  # 沿第一个维度计算平均值，忽略NaN
+    # Use nanmean so samples without valid depth do not break the summary.
+    mean_errors = np.nanmean(errors, axis=1)
 
-    # 打印结果
+    # Print results.
     print("{}".format(args.output_dir))
     print("Depth Results : ")
     print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format(*error_names))
     print("{:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}".format(*mean_errors))
 
-    # 打印有效样本数量
-    valid_samples = np.sum(~np.isnan(errors[0, :]))  # 计算第一个错误指标中非NaN的数量
+    # Print the number of valid samples.
+    valid_samples = np.sum(~np.isnan(errors[0, :]))
     total_samples = errors.shape[1]
     print(f"Valid samples: {valid_samples}/{total_samples}")
 
-    # 保存错误数据到CSV
-    # 创建一个新数组，第一行是平均值，其余行是每个样本的完整错误
+    # Save error values to CSV.
+    # The first row is the mean, followed by per-sample errors.
     full_errors = np.vstack([mean_errors, errors.T])
 
-    # 创建带有注释的CSV标题
+    # Create a commented CSV header.
     header = "# First row: mean errors (nanmean), remaining rows: individual sample errors\n"
     header += f"# Valid samples: {valid_samples}/{total_samples}\n"
     header += ','.join(error_names)
 
-    # 保存到CSV文件
+    # Save to CSV.
     np.savetxt(output_dir/'errors.csv', full_errors, fmt='%1.4f', delimiter=',', 
             header=header, comments='')
     

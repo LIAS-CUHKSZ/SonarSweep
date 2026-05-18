@@ -1,11 +1,7 @@
 from __future__ import print_function
 import torch
 import torch.nn as nn
-import torch.utils.data
-from torch.autograd import Variable
 import torch.nn.functional as F
-import math
-import numpy as np
 
 def convbn(in_planes, out_planes, kernel_size, stride, pad, dilation):
 
@@ -98,9 +94,9 @@ class feature_extraction(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):                 # torch.Size([1, 3,  256, 512])
-        output      = self.firstconv(x)   # torch.Size([1, 32, 128, 256])  (H/2, W/2) 下采样
+        output      = self.firstconv(x)   # torch.Size([1, 32, 128, 256])  (H/2, W/2) downsampled
         output      = self.layer1(output)  # torch.Size([1, 32, 128, 256]) 
-        output_raw  = self.layer2(output)  # torch.Size([1, 64, 64, 128]) (H/4, W/4)  下采样
+        output_raw  = self.layer2(output)  # torch.Size([1, 64, 64, 128]) (H/4, W/4) downsampled
         output      = self.layer3(output_raw) # torch.Size([1, 128, 64, 128])
         output_skip = self.layer4(output)     # torch.Size([1, 128, 64, 128])
 
@@ -127,128 +123,26 @@ class feature_extraction(nn.Module):
 class DisparityRegression(nn.Module):
     def __init__(self, maxdisp, device='cuda'):
         super(DisparityRegression, self).__init__()
-        # 创建视差值张量 d: [0, 1, 2, ...]
+        # Create disparity values d: [0, 1, 2, ...].
         disp_values = torch.arange(maxdisp, dtype=torch.float32, device=device).view(1, maxdisp, 1, 1)
-        self.register_buffer('disp', disp_values) # 使用 register_buffer 注册，它不会被视为模型参数
+        self.register_buffer('disp', disp_values)
 
-        # 创建视差值平方的张量 d^2: [0, 1, 4, ...]
+        # Create squared disparity values d^2: [0, 1, 4, ...].
         disp_sq_values = disp_values ** 2
         self.register_buffer('disp_sq', disp_sq_values)
 
     def forward(self, x):
-        # x 是 softmax 的输出，即概率体 P(d)
-        # x 的形状: [B, D, H, W]
+        # x is the softmax output, i.e. probability volume P(d).
+        # Shape: [B, D, H, W].
         
-        # 计算期望 E[d] = Σ [d * P(d)]
-        # self.disp 的形状是 [1, D, 1, 1]，会自动广播以匹配 x
+        # Compute expectation E[d] = sum(d * P(d)).
         disparity = torch.sum(x * self.disp, 1)
 
-        # 计算 E[d^2] = Σ [d^2 * P(d)]
-        # self.disp_sq 的形状是 [1, D, 1, 1]，也会自动广播
+        # Compute E[d^2] = sum(d^2 * P(d)).
         disparity_sq_expectation = torch.sum(x * self.disp_sq, 1)
         
-        # 计算方差 Var(d) = E[d^2] - (E[d])^2
+        # Compute variance Var(d) = E[d^2] - E[d]^2.
         variance = disparity_sq_expectation - disparity.pow(2)
 
-        # 返回视差图（期望）和不确定性图（方差）
-        # 两者的形状都是 [B, H, W]
+        # Return disparity expectation and uncertainty variance, both [B, H, W].
         return disparity, variance
-
-
-
-# ==============================================================================
-# 以下是用于分析网络架构的 main 函数
-# ==============================================================================
-def analyze_network_architecture():
-    """
-    此函数实例化 feature_extraction 和 soanr_feature_extraction 网络，
-    并详细分析它们的架构、数据流、维度变化和参数量。
-    """
-    print("="*80)
-    print("PyTorch 版本:", torch.__version__)
-    print("CUDA 是否可用:", torch.cuda.is_available())
-    print("="*80)
-
-    # --------------------------------------------------------------------------
-    # 1. 分析 'feature_extraction' 网络 (用于1通道图像)
-    # --------------------------------------------------------------------------
-    print("\n--- 1. 分析 'feature_extraction' 网络 (设计用于1通道图像) ---\n")
-    
-    # 实例化模型
-    feature_extraction_model = feature_extraction()
-
-    # 计算参数量
-    total_params = sum(p.numel() for p in feature_extraction_model.parameters())
-    trainable_params = sum(p.numel() for p in feature_extraction_model.parameters() if p.requires_grad)
-    
-    print(f"模型总参数量: {total_params:,}")
-    print(f"可训练参数量: {trainable_params:,}")
-    print(f"模型大小估计: {total_params * 4 / 1024 / 1024:.2f} MB (假设每个参数4字节)")
-    
-    # 各子模块参数贡献分析
-    print("\n各子模块参数贡献:")
-    print(f"{'模块名':<20} {'参数量':>15} {'占比 (%)':>15}")
-    print("-" * 55)
-    
-    for name, module in feature_extraction_model.named_children():
-        module_params = sum(p.numel() for p in module.parameters())
-        if total_params > 0:
-            proportion = (module_params / total_params) * 100
-            print(f"{name:<20} {module_params:>15,} {proportion:>14.2f}%")
-    print("-" * 55)
-
-    # 测试前向传播
-    dummy_input_img = torch.randn(1, 1, 68, 368)
-    print(f"\n输入张量尺寸: {dummy_input_img.shape}")
-    
-    try:
-        final_output = feature_extraction_model(dummy_input_img)
-        print(f"成功执行前向传播！")
-        print(f"最终输出特征图尺寸: {final_output.shape}")
-    except Exception as e:
-        print(f"执行前向传播时出错: {e}")
-
-    dummy_input_img = torch.randn(1, 1, 112, 640)
-    print(f"\n输入张量尺寸: {dummy_input_img.shape}")
-    
-    try:
-        final_output = feature_extraction_model(dummy_input_img)
-        print(f"成功执行前向传播！")
-        print(f"最终输出特征图尺寸: {final_output.shape}")
-    except Exception as e:
-        print(f"执行前向传播时出错: {e}")
-        
-if __name__ == "__main__":
-    analyze_network_architecture()
-
-
-# --- 1. 分析 'feature_extraction' 网络 (设计用于1通道图像) ---
-
-# 模型总参数量: 3,338,976
-# 可训练参数量: 3,338,976
-# 模型大小估计: 12.74 MB (假设每个参数4字节)
-
-# 各子模块参数贡献:
-# 模块名                              参数量          占比 (%)
-# -------------------------------------------------------
-# firstconv                     18,912           0.57%
-# layer1                        55,680           1.67%
-# layer2                     1,167,488          34.97%
-# layer3                       820,992          24.59%
-# layer4                       886,272          26.54%
-# branch1                        4,160           0.12%
-# branch2                        4,160           0.12%
-# branch3                        4,160           0.12%
-# branch4                        4,160           0.12%
-# lastconv                     372,992          11.17%
-# -------------------------------------------------------
-
-# 输入张量尺寸: torch.Size([1, 1, 68, 368])
-# /home/clp/.local/lib/python3.12/site-packages/torch/nn/functional.py:3809: UserWarning: nn.functional.upsample is deprecated. Use nn.functional.interpolate instead.
-#   warnings.warn("nn.functional.upsample is deprecated. Use nn.functional.interpolate instead.")
-# 成功执行前向传播！
-# 最终输出特征图尺寸: torch.Size([1, 32, 34, 184])
-
-# 输入张量尺寸: torch.Size([1, 1, 112, 640])
-# 成功执行前向传播！
-# 最终输出特征图尺寸: torch.Size([1, 32, 56, 320])

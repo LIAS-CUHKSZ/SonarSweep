@@ -12,22 +12,22 @@ from config.model_config import MEAN, STD
 
 def set_seed(seed=42):
     """
-    设置随机种子,保证实验可复现性
+    Set random seeds for reproducible experiments.
     """
-    random.seed(seed)  # Python的随机性
-    np.random.seed(seed)  # numpy的随机性 
-    torch.manual_seed(seed)  # torch的CPU随机性
-    torch.cuda.manual_seed(seed)  # torch的GPU随机性
-    torch.cuda.manual_seed_all(seed)  # 多GPU的随机性
+    random.seed(seed)  # Python randomness
+    np.random.seed(seed)  # NumPy randomness
+    torch.manual_seed(seed)  # Torch CPU randomness
+    torch.cuda.manual_seed(seed)  # Torch GPU randomness
+    torch.cuda.manual_seed_all(seed)  # Multi-GPU randomness
     
-    # 设置CPU线程为1,避免CPU多线程带来的不确定性
+    # Use a single CPU thread to reduce nondeterminism.
     torch.set_num_threads(1)
     
-    # cuDNN相关设置,提高确定性
+    # cuDNN settings for deterministic behavior.
     torch.backends.cudnn.deterministic = True  
     torch.backends.cudnn.benchmark = False
     
-    # 设置Python的hash种子
+    # Python hash seed.
     os.environ['PYTHONHASHSEED'] = str(seed)
 
 
@@ -81,19 +81,19 @@ def cam_tensor2array(tensor):
 
 def sonar_tensor2array(tensor, max_value=1.0):
     """
-    将单通道张量转换为灰度图像数组，用于TensorBoard可视化
+    Convert a single-channel tensor to a grayscale image array for TensorBoard.
     """
     if max_value is None:
         max_value = tensor.max()
     
-    # 处理单通道图像(声纳图像)
+    # Single-channel sonar image.
     if tensor.ndimension() == 2 or tensor.size(0) == 1:
-        # 将张量压缩并归一化到0-1范围
+        # Squeeze and normalize to the 0-1 range.
         array = tensor.squeeze().numpy() / max_value
         array = array.clip(0, 1)
         
-        # 将单通道图像转为三通道灰度图(HWC格式)
-        # TensorBoard要求图像为RGB格式，即使是灰度图也需要3个通道
+        # Convert a single-channel image to three-channel grayscale in HWC format.
+        # TensorBoard expects RGB images, even for grayscale content.
         h, w = array.shape
         rgb_array = np.zeros((h, w, 3), dtype=np.float32)
         rgb_array[:, :, 0] = array
@@ -102,7 +102,7 @@ def sonar_tensor2array(tensor, max_value=1.0):
         
         return rgb_array
     
-    # 处理RGB图像
+    # RGB image.
     elif tensor.ndimension() == 3 and tensor.size(0) == 3:
         array = 0.5 + tensor.numpy().transpose(1, 2, 0) * 0.5
         return array
@@ -121,4 +121,3 @@ def adjust_learning_rate(args, optimizer, epoch):
     lr = args.lr * (0.1 ** (epoch // 10))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-

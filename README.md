@@ -63,6 +63,15 @@ python test.py --data <dataset_path> --pretrained-dps <checkpoint_path> --output
 
 By default, the testing results are saved under `result/vfov12hfov60_test/test`.
 
+You can visualize the output results with RViz and `rviz_depth.py`:
+
+```bash
+rviz -d config/rviz.rviz
+python3 rviz_depth.py
+```
+
+![Test result visualization](fig/test_result.jpg)
+
 
 
 ## Performance

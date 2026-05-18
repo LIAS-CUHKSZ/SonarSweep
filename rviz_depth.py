@@ -17,7 +17,7 @@ DEPTH_MIN = 0.5
 DEPTH_MAX = 5
 
 def visualize_uncertainty(uncertainty_img, mask, max_uncertainty=2.0):
-    """将不确定性图转换为可视化彩色图"""
+    """Convert an uncertainty map to a color image."""
     uncertainty_in_metres = np.nan_to_num(uncertainty_img, nan=max_uncertainty)
     uncertainty_in_metres[uncertainty_in_metres > max_uncertainty] = max_uncertainty
     uncertainty_in_metres[~mask] = 0
@@ -137,16 +137,16 @@ class DataPublisher:
         valid_mask_gt = ~np.isnan(gt_depth) & (gt_depth > DEPTH_MIN) & (gt_depth < DEPTH_MAX)
         valid_mask_gt[:, :20] = False
         valid_mask_gt[:, -20:] = False
-        valid_mask_gt[:4, :] = False  # 过滤上边缘20像素
-        valid_mask_gt[-4:, :] = False  # 过滤下边缘20像素
+        valid_mask_gt[:4, :] = False
+        valid_mask_gt[-4:, :] = False
 
         valid_mask = valid_mask_gt
       
         valid_mask_est = ~np.isnan(est_depth) & (est_depth > DEPTH_MIN) & (est_depth < DEPTH_MAX)
         valid_mask_est[:, :20] = False
         valid_mask_est[:, -20:] = False
-        valid_mask_est[:4, :] = False  # 过滤上边缘20像素
-        valid_mask_est[-4:, :] = False  # 过滤下边缘20像素
+        valid_mask_est[:4, :] = False
+        valid_mask_est[-4:, :] = False
 
         print(f"Valid pixels: {np.sum(valid_mask)}/{valid_mask.size}")
         
@@ -269,7 +269,7 @@ def main():
     try:
         data_publisher = DataPublisher()
 
-        result_dir = Path("result/vfov12hfov60/test")   
+        result_dir = Path("result/vfov12hfov60_test/test")   
         csv_filename = f"summary_{result_dir.name}.csv"
         
         while not rospy.is_shutdown():
@@ -280,7 +280,6 @@ def main():
                 if folder.name.isdigit():
                     rospy.loginfo(f"Publishing data from folder: {folder}")
                     data_publisher.publish_data(folder)
-                    input()
             
             rospy.loginfo("Completed one round of publishing, waiting before next round...")
             rospy.sleep(2.0)

@@ -14,7 +14,6 @@ import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 import custom_transforms
@@ -46,7 +45,6 @@ parser.add_argument('--epochs', default=100, type=int, metavar='N',
 parser.add_argument('--epoch-size', default=0, type=int, metavar='N',
                     help='manual epoch size (will match dataset size if not set)')
 
-# TODO:
 parser.add_argument('-b', '--batch-size', default=BATCH_SIZE, type=int,
                     metavar='N', help='mini-batch size')
 # parser.add_argument('-b', '--batch-size', default=4, type=int,
@@ -64,8 +62,6 @@ parser.add_argument('--print-freq', default=10, type=int,
                     metavar='N', help='print frequency')
 parser.add_argument('-e', '--evaluate', dest='evaluate', default=True,
                     help='evaluate model on validation set')
-
-# TODO:
 
 parser.add_argument('--pretrained-dps', dest='pretrained_dps', default=None, metavar='PATH', help='path to pre-trained dpsnet model')
 
@@ -170,61 +166,44 @@ def main():
     
     dpsnet = PSNet(nlabel, mindepth, label_factor, alpha).to(device)
 
-    
-    # # TODO: 这里需要加载预训练的DPSNet模型
-    # # print("=> loading pre-trained DPSNet model")
-    # # weights = torch.load(args.pretrained_dps)
-    # # for key, value in weights['state_dict'].items():
-    # #     print(f"{key}: {value.shape}")
-    
-    # if args.pretrained_dps:
-    #     print("=> using pre-trained weights for DPSNet")
-    #     weights = torch.load(args.pretrained_dps)
-    #     dpsnet.load_state_dict(weights['state_dict'])
-    #     print(f"Successfully load model from: {args.pretrained_dps}")
-        
-    # else:
-    #     dpsnet.init_weights()
-
     if args.pretrained_dps and TRAIN_NEW:
         print("=> using pre-trained weights for PSNet (partially loading due to model changes)")
 
-       # 1. 加载预训练权重文件
+        # 1. Load the pretrained checkpoint.
         weights = torch.load(args.pretrained_dps)
         pretrained_dict = weights['state_dict']
 
-        # 2. 创建一个新的字典，只包含那些不以指定前缀开头的层
+        # 2. Keep only layers that do not start with the excluded prefixes.
         prefixes_to_exclude = ['rgb_feature_extraction.', 'sonar_feature_extraction.']
         
-        # 使用字典推导式进行过滤
+        # Filter the checkpoint dictionary.
         filtered_dict = {k: v for k, v in pretrained_dict.items() 
                         if not any(k.startswith(prefix) for prefix in prefixes_to_exclude)}
 
-        # 检查一下过滤是否生效
+        # Report the filtering effect.
         original_keys_count = len(pretrained_dict)
         filtered_keys_count = len(filtered_dict)
         print(f"Original checkpoint has {original_keys_count} layers.")
         print(f"Excluding feature extractors, {filtered_keys_count} layers will be loaded.")
 
-        # 3. 将过滤后的权重加载到模型中
-        # 使用 strict=False 是最简单的方式。它会加载 filtered_dict 中的所有权重，
-        # 并忽略模型中那些不在 filtered_dict 中的层（也就是你的特征提取器）。
+        # 3. Load the filtered weights. strict=False allows the changed feature
+        # extractors to remain randomly initialized.
         missing_keys, unexpected_keys = dpsnet.load_state_dict(filtered_dict, strict=False)
 
-        # 打印加载状态，让你确认操作是否符合预期
+        # Print the load status for verification.
         print(f"Successfully loaded model from: {args.pretrained_dps}")
         if unexpected_keys:
             print("\nWarning: The following keys from the checkpoint were not found in the model:")
             print(unexpected_keys)
         if missing_keys:
             print(f"\nThe following {len(missing_keys)} keys in the model were not found in the filtered checkpoint (as expected):")
-            # 只打印前几个例子
+            # Print only the first few examples.
             for k in sorted(missing_keys)[:5]:
                 print(f"  - {k}")
             if len(missing_keys) > 5:
                 print("  - ... and more")
                 
-        # 6. (关键步骤) 显式地重新初始化你改变过的网络
+        # Reinitialize the changed feature extraction networks explicitly.
         dpsnet.initialize_feature_extractors()
 
     elif args.pretrained_dps and not TRAIN_NEW:
@@ -234,10 +213,7 @@ def main():
     
     else:
         print("=> no pre-trained weights provided, initializing all weights from scratch.")
-        # 如果没有预训练权重，你的 init_weights() 方法是合适的，但为了统一，
-        # 也可以使用我们上面写的更具体的初始化函数。
         dpsnet.init_weights()
-        # 注意：init_weights() 会初始化所有层，而 initialize_feature_extractors 只初始化特定部分。
     
     cudnn.benchmark = True
     dpsnet = torch.nn.DataParallel(dpsnet)
@@ -338,9 +314,9 @@ def train(args, train_loader, dpsnet: PSNet, optimizer, epoch_size, train_writer
 
 
         # get mask
-        mask = (depth_gt <= args.maxdepth) & (depth_gt >= args.mindepth) & (depth_gt == depth_gt) # tgt_depth == tgt_depth: 排除NaN值(NaN不等于自身)
-        mask[:, :20] = False  # 前10列设置为False
-        mask[:, -20:] = False  # 后10列设置为False
+        mask = (depth_gt <= args.maxdepth) & (depth_gt >= args.mindepth) & (depth_gt == depth_gt)
+        mask[:, :20] = False
+        mask[:, -20:] = False
 
         mask.detach_()
 
@@ -425,7 +401,7 @@ def validate_with_gt(args, val_loader, dpsnet, epoch, output_writer, log_file_na
             output_depth, variance = dpsnet(cam_img_var, sonar_rect_img_var, K_var, T_sonar_from_cam_var, distance_range_var, theta_range_var)
 
             mask = (depth_gt <= args.maxdepth-0.5) & (depth_gt >= args.mindepth) & (depth_gt == depth_gt)
-            mask[:, :20] = False  # 对est mask也应用相同过滤
+            mask[:, :20] = False
             mask[:, -20:] = False
             mask.detach_()
             output = torch.squeeze(output_depth.data.cpu(),1)
@@ -433,7 +409,6 @@ def validate_with_gt(args, val_loader, dpsnet, epoch, output_writer, log_file_na
             if i % 10 == 0: # write 10 validation result
                 # val_iter = 100*epoch + i/10
                 val_iter = i/10
-                # tag = f'val_Depth_Output_{epoch}'  # 为每个epoch创建新的tag
                 output_writer.add_image(f'{epoch} val rgb Input', cam_tensor2array(cam_img[0]), val_iter, dataformats='HW')
                 output_writer.add_image(f'{epoch} val sonar Input', sonar_tensor2array(sonar_rect_img[0]), val_iter, dataformats='HWC')
                 depth_to_show = depth_gt_var.data[0].cpu()

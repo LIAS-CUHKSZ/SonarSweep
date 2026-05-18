@@ -3,7 +3,7 @@ STD=1
 
 BATCH_SIZE=4
 WORKERS=2
-DATA_DIR = "/media/liasorin/T9/SonarSweep_dataset_combined/vfov12hfov60"
+DATA_DIR = "data/vfov12hfov60"
 
 TRAIN_NEW = True
 
