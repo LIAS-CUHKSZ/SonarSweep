@@ -10,3 +10,6 @@ analysis_output/
 .vscode
 summary_test.csv
 summary_dataset.csv
+/fig/real_performance.mp4
+fig/sim_performance.mp4
+2511.00392v1.pdf
