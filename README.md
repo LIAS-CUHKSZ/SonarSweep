@@ -106,7 +106,7 @@ Although the predicted depth is not metrically scaled, it provides useful struct
 
 Through extensive experiments, we also acknowledge that robust underwater depth estimation requires a large amount of diverse data. The generalization ability of our current method is still limited, especially because sonar data usually has a larger domain gap than visual data. Different sonar devices, mounting configurations, water conditions, acoustic noise patterns, and scene geometries can all introduce significant **distribution shifts**, making cross-modal learning even more challenging.
 
-We are currently working on collecting and releasing more real-world cross-modal sonar-vision datasets. In parallel, we are also exploring self-supervised depth estimation methods beyond fully supervised training, with the goal of reducing the dependence on dense ground-truth depth and improving real-world generalization.
+**We are currently working on collecting and releasing more real-world cross-modal sonar-vision datasets.** In parallel, we are also exploring self-supervised depth estimation methods beyond fully supervised training, with the goal of reducing the dependence on dense ground-truth depth and improving real-world generalization.
 
 ## Citation
 
