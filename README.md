@@ -4,13 +4,12 @@
 
 SonarSweep is an end-to-end learning framework for dense underwater 3D reconstruction from synchronized camera and forward-looking sonar data. The method adapts deep plane sweeping to cross-modal sonar-vision fusion: sonar features are back-projected onto candidate planes, differentiably warped into the camera view, and matched with camera features through a learned cost volume to regress dense metric depth.
 
-The project targets robust reconstruction in visually degraded underwater environments, where camera-only methods suffer from turbidity and short stereo baselines, while sonar-only methods are limited by elevation ambiguity and low spatial resolution.
-
-## Overview
-
 ![SonarSweep concept](fig/concept.jpg)
 
-![SonarSweep method overview](fig/method_overview.jpg)
+The project targets robust reconstruction in visually degraded underwater environments, where camera-only methods suffer from turbidity and short stereo baselines, while sonar-only methods are limited by elevation ambiguity and low spatial resolution.
+
+
+
 
 ## Installation
 
@@ -26,39 +25,59 @@ pip install -r requirements.txt
 
 ## Testing
 
+We have uploaded the data used in this project to Hugging Face:
+
+https://huggingface.co/datasets/Lingpenghaha/Sonarsweep_dataset/tree/main
+
+If you are interested in recording and building your own dataset, we also provide the full dataset construction pipeline:
+
+1. Build an OceanSim-based simulator and record rosbag files. Please refer to https://github.com/LingpengChen/LIAS_oceansim
+2. Process the recorded rosbag files into a usable SonarSweep dataset. Please refer to https://github.com/LingpengChen/SonarSweep_dataset
+
+If you want to directly use our dataset, we provide a simulated dataset with more than 7,000 data points.
+
+For a quick test, download the test split:
+
 ```bash
-python test.py
+python3 utils/download_test_dataset.py
 ```
 
-Common options include:
+`download_test_dataset.py` downloads both `vfov12hfov60_test/` and `test.txt` into the `data/` folder.
+
+For the full simulated dataset, run:
 
 ```bash
+python3 utils/download_full_dataset.py
+```
+
+The full dataset contains dozens of trajectories with different data sizes. In our training setup, 60% of the trajectories are used for training, 20% for validation, and 20% for testing.
+
+We recommend downloading the test data first with `utils/download_test_dataset.py`. After the download is complete, you can directly run:
+
+```bash
+python test.py
+
+# Common options include:
 python test.py --data <dataset_path> --pretrained-dps <checkpoint_path> --output-dir <output_dir>
 ```
 
+By default, the testing results are saved under `result/vfov12hfov60_test/test`.
 
-## Training
-
-```bash
-python train.py
-```
-
-Common options include:
-
-```bash
-python train.py --data <dataset_path> --batch-size <batch_size> --epochs <num_epochs>
-```
 
 
 ## Performance
 
-**Real-world performance**
+<table>
+  <tr>
+    <td align="center"><strong>Simulation performance</strong></td>
+    <td align="center"><strong>Real-world performance</strong></td>
+  </tr>
+  <tr>
+    <td><img src="fig/sim_performance.gif" alt="Simulation performance" width="100%"></td>
+    <td><img src="fig/real_performance.gif" alt="Real-world performance" width="100%"></td>
+  </tr>
+</table>
 
-![Real-world performance](fig/real_performance.gif)
-
-**Simulation performance**
-
-![Simulation performance](fig/sim_performance.gif)
 
 ## Undergoing Improvement
 

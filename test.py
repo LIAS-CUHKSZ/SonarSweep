@@ -71,10 +71,9 @@ parser.add_argument('--pretrained-dps', dest='pretrained_dps', default="./pretra
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 
 
-case = 'vfov12hfov60'
+case = 'vfov12hfov60_test'
 place = 'test'
 # case = 'vfov12hfov60_real_Type-1C'
-# parser.add_argument('--data', metavar='DIR', default=f"/media/clp/T9/SonarSweep_dataset/combined_and_enhanced_dataset/{case}",help='path to dataset')
 parser.add_argument('--data', metavar='DIR', default=f"data/{case}",help='path to dataset')
 
 parser.add_argument('--ttype', default=f'../{place}.txt', type=str, help='Text file indicates input data')
@@ -166,9 +165,6 @@ def main():
             
             elps = time.time() - start
         
-            # mask = (depth_gt <= args.maxdepth) & (depth_gt >= args.mindepth) & (depth_gt == depth_gt) # tgt_depth == tgt_depth: 排除NaN值(NaN不等于自身)
-            # mask[:, :20] = False  # 前10列设置为False
-            # mask[:, -20:] = False
 
             output_depth = torch.squeeze(output_depth.data.cpu(),1)
             uncertainty_array = torch.squeeze(variance.data.cpu(),1)
@@ -229,13 +225,6 @@ def main():
     # 保存结果到文件
     evaluator.save_results("depth_evaluation_results.txt")
 
-    # mean_errors = errors.mean(-1)
-    # error_names = ['abs_rel','abs_diff','sq_rel','rms','log_rms','a1','a2','a3']
-    # print("{}".format(args.output_dir))
-    # print("Depth Results : ")
-    # print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format(*error_names))
-    # print("{:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}".format(*mean_errors))
-    # np.savetxt(output_dir/'errors.csv', mean_errors, fmt='%1.4f', delimiter=',')
 
     error_names = ['abs_rel','abs_diff','sq_rel','rms','log_rms','a1','a2','a3']
     # 使用nanmean来正确处理NaN值（当某些样本没有有效深度值时）

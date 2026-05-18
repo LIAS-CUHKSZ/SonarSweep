@@ -11,6 +11,5 @@ progressbar33==2.4
 scipy==1.13.0
 scikit-image
 tensorboardX==2.6.2.2
-torch==2.3.1
 torchinfo==1.8.0
 tqdm
