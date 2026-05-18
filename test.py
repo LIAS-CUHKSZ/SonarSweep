@@ -72,7 +72,7 @@ parser.add_argument('--seed', default=0, type=int, help='seed for random functio
 
 
 case = 'vfov12hfov60'
-place = 'dataset'
+place = 'test'
 # case = 'vfov12hfov60_real_Type-1C'
 # parser.add_argument('--data', metavar='DIR', default=f"/media/clp/T9/SonarSweep_dataset/combined_and_enhanced_dataset/{case}",help='path to dataset')
 parser.add_argument('--data', metavar='DIR', default=f"data/{case}",help='path to dataset')
@@ -202,7 +202,9 @@ def main():
 
                 cv2.imwrite(str(output_dir / f'{i:04d}' / 'cam_image_full.png'), cam_right_img.squeeze().numpy())
         
-                cv2.imwrite(str(output_dir / f'{i:04d}' / 'sonar_image_full.png'), sonar_rect_original_img.squeeze().numpy())
+                sonar_image = sonar_rect_original_img.squeeze().numpy()
+                cv2.imwrite(str(output_dir / f'{i:04d}' / 'sonar_image_full.png'), sonar_image)
+                cv2.imwrite(str(output_dir / f'{i:04d}' / 'sonar_image.png'), sonar_image)
 
                 cv2.imwrite(str(output_dir / f'{i:04d}' / 'cam_image.png'), cam_img_array)
 

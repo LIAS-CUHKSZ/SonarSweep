@@ -66,9 +66,8 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', default=True,
                     help='evaluate model on validation set')
 
 # TODO:
-# parser.add_argument('--pretrained-dps', dest='pretrained_dps', default="./checkpoints/vfov12hfov60/07-18-20:53/dpsnet_17_checkpoint.pth.tar", metavar='PATH', help='path to pre-trained dpsnet model')
-# parser.add_argument('--pretrained-dps', dest='pretrained_dps', default="./pretrained/dpsnet.pth.tar", metavar='PATH', help='path to pre-trained dpsnet model')
-parser.add_argument('--pretrained-dps', dest='pretrained_dps', default=PRE_TRAINED_DPS, metavar='PATH', help='path to pre-trained dpsnet model')
+
+parser.add_argument('--pretrained-dps', dest='pretrained_dps', default=None, metavar='PATH', help='path to pre-trained dpsnet model')
 
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 

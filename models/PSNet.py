@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from config.model_config import FEATURE_EXTRACTOR_TYPE, FEATURE_EXTRACTOR_DOWNSAMPLE
 from config.model_config import CAM_RESOLUTION_WIDTH_FOR_IMAGE_FEATURE_EXTRACTION, CAM_RESOLUTION_HEIGHT_FOR_IMAGE_FEATURE_EXTRACTION
 from config.model_config import SONAR_RESOLUTION_WIDTH_FOR_IMAGE_FEATURE_EXTRACTION, SONAR_RESOLUTION_HEIGHT_FOR_IMAGE_FEATURE_EXTRACTION
 from .submodule import *
