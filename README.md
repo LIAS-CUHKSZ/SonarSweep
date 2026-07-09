@@ -2,7 +2,7 @@
 
 **SonarSweep: Fusing Sonar and Vision for Robust 3D Reconstruction via Plane Sweeping**
 
-SonarSweep is an end-to-end learning framework for dense underwater 3D reconstruction from synchronized camera and forward-looking sonar data. The method adapts deep plane sweeping to cross-modal sonar-vision fusion: sonar features are back-projected onto candidate planes, differentiably warped into the camera view, and matched with camera features through a learned cost volume to regress dense metric depth.
+SonarSweep is an end-to-end learning framework for dense underwater 3D reconstruction from synchronized camera and forward-looking sonar data. The method adapts deep plane sweeping to cross-modal sonar-vision fusion: sonar features are back-projected onto candidate planes, differentiably warped into the camera view, and matched with camera features through a learned cost volume to regress dense metric depth. Full demo video: [Bilibili](https://www.bilibili.com/video/BV1cVMH6pED3/)
 
 ![SonarSweep concept](fig/concept.jpg)
 
